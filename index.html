@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Tableau de Bord Power BI – Projet 4DS (Chatbot)</title>
+  <style>
+    :root{
+      --brand:#1f3b73; --bg:#f5f7fb; --panel:#fff; --muted:#6b7280; --text:#1f2937;
+      --ring:rgba(31,59,115,.25); --shadow:0 10px 28px rgba(0,0,0,.10);
+      --radius:14px; --leftW:260px; --rightW:360px;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0; font-family:"Segoe UI",system-ui,-apple-system,Arial,sans-serif; color:var(--text); background:var(--bg);
+      display:grid; grid-template-columns:var(--leftW) 1fr var(--rightW); grid-template-rows:auto 1fr auto;
+      grid-template-areas:"header header header" "sleft main sright" "footer footer footer"; min-height:100vh;
+    }
+
+    /* HEADER */
+    header{grid-area:header;background:var(--brand);color:#fff;position:sticky;top:0;z-index:50;box-shadow:var(--shadow)}
+    .topbar{max-width:1440px;margin:0 auto;display:flex;gap:12px;align-items:center;padding:12px 18px}
+    .logo{width:28px;height:28px;border-radius:7px;background:linear-gradient(135deg,#7cc4ff,#5a8bff)}
+    h1{margin:0;font-size:18px;letter-spacing:.2px;flex:1}
+
+    /* SIDE BARS */
+    .sidebar{
+      position:sticky; top:68px; height:calc(100vh - 68px);
+      background:var(--panel); box-shadow:var(--shadow); border-radius:12px; padding:14px;
+      display:flex; flex-direction:column; gap:10px; overflow:hidden;
+    }
+    .left{grid-area:sleft;border-radius:0 var(--radius) var(--radius) 0}
+    .right{grid-area:sright;border-radius:var(--radius) 0 0 var(--radius)}
+    .sidebar h3{margin:0 0 6px 0;font-size:14px;color:#374151}
+    .hint{font-size:12px;color:#muted}
+    .nav{display:flex;flex-direction:column;gap:10px;margin-top:6px}
+    .link{background:#f3f6fd;border:1px solid #e3e9fb;border-radius:12px;padding:12px;text-align:left;cursor:pointer;display:flex;gap:8px}
+    .link:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.08)}
+
+    /* ZONE POWER BI */
+    main{grid-area:main;display:flex;align-items:center;justify-content:center;padding:16px}
+    .frame{
+      width:100%; max-width:1260px; height:80vh;
+      border:0; border-radius:var(--radius); background:var(--panel); box-shadow:var(--shadow);
+    }
+
+    /* LOADER */
+    .loader{
+      position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);
+      width:56px;height:56px;border-radius:50%; border:6px solid #e5e7eb;border-top-color:var(--brand);
+      animation:spin 1s linear infinite;display:none
+    }
+    @keyframes spin{to{transform:translate(-50%,-50%) rotate(360deg)}}
+
+    /* CHATBOT – design amélioré */
+    .chat-shell{display:flex;flex-direction:column;min-height:0;gap:12px;height:100%}
+    .chat-head{
+      position:sticky; top:0; z-index:1; background:linear-gradient(180deg,#ffffff, #f7f9ff);
+      border:1px solid #e8ecf7; border-radius:12px; padding:10px 12px; display:flex; align-items:center; gap:10px;
+    }
+    .chat-title{font-weight:700;font-size:14px;color:#21314f;display:flex;align-items:center;gap:8px}
+    .chip{
+      font-size:11px; padding:6px 10px; border-radius:999px; border:1px solid #e3e9fb; background:#f6f8fe; color:#3b4a75;
+      cursor:pointer; margin-left:auto;
+    }
+    .chip:hover{box-shadow:0 2px 8px rgba(31,59,115,.12)}
+    .messages{
+      flex:1; min-height:0; overflow:auto; padding-right:2px;
+      display:flex; flex-direction:column; gap:10px;
+      scroll-behavior:smooth;
+    }
+    .bubble{
+      max-width:88%; padding:10px 12px; border-radius:14px; border:1px solid #ecf0f8; box-shadow:0 2px 8px rgba(0,0,0,.05);
+      white-space:pre-wrap; line-height:1.35;
+    }
+    .user{align-self:flex-end;background:#e8f1ff;border-color:#d9e8ff}
+    .bot{align-self:flex-start;background:#fff}
+    .chat-input{
+      display:flex; gap:8px; align-items:center; background:#fff; border:1px solid #e6ebf5; border-radius:12px; padding:8px;
+      box-shadow:0 2px 8px rgba(0,0,0,.04)
+    }
+    .chat-input input{
+      flex:1; border:1px solid #d9e0ec; border-radius:10px; padding:10px 12px; font-size:14px; outline:none;
+    }
+    .chat-input input:focus{box-shadow:0 0 0 4px var(--ring); border-color:#b9c6ea}
+    .chat-input button{
+      border:0; background:var(--brand); color:#fff; border-radius:10px; padding:10px 12px; cursor:pointer; font-weight:600
+    }
+    .thinking{font-size:12px;color:#6b7280;padding-left:6px}
+
+    /* FOOTER – photos harmonisées + ajustement 1 & 2 */
+    footer{grid-area:footer;background:#eef2f7;border-top:1px solid #dde3ec;padding:14px 12px 20px}
+    .footer-photos{
+      max-width:1260px; margin:0 auto 10px;
+      display:grid; gap:12px;
+      grid-template-columns:repeat(5, minmax(160px, 1fr)); /* 5 cartes régulières sur desktop */
+    }
+    .footer-photos figure{
+      margin:0;background:#fff;border-radius:12px;padding:8px;box-shadow:0 2px 6px rgba(0,0,0,.08);
+      display:flex;flex-direction:column
+    }
+    .img-wrap{width:100%;aspect-ratio:4/3; border-radius:10px;overflow:hidden}
+    .footer-photos img{width:100%;height:100%;object-fit:cover;object-position:50% 50%;display:block}
+    /* Ajustements spécifiques : photos 1 et 2 (ré-centrage + léger dézoom) */
+    .footer-photos img.adjust-1,
+    .footer-photos img.adjust-2{
+      object-position:50% 38%;
+      transform:scale(0.92);
+      transform-origin:center center;
+    }
+    .footer-photos figcaption{font-size:12px;color:#6b7280;text-align:center;margin-top:8px}
+    .credits{text-align:center;font-size:13px;color:#4b5563}
+    .credits a{color:#1f3b73;font-weight:600;text-decoration:none}
+
+    /* RESPONSIVE — chatbot reste visible */
+    @media (max-width:1400px){ .frame{max-width:1100px} }
+    @media (max-width:1200px){
+      /* .right{display:none}  <-- supprimé pour laisser le chatbot visible */
+      body{grid-template-columns:200px 1fr 320px}   /* on resserre un peu les colonnes */
+      .left{padding:10px}
+      .right{padding:10px}
+      .frame{max-width:100%;height:72vh}
+      .footer-photos{grid-template-columns:repeat(4, minmax(140px,1fr))}
+    }
+    @media (max-width:900px){
+      body{grid-template-columns:170px 1fr 280px}
+      .footer-photos{grid-template-columns:repeat(3, minmax(140px,1fr))}
+    }
+    @media (max-width:700px){
+      body{grid-template-columns:1fr} /* pile sous 700px : layout vertical */
+      .left,.right{position:static;height:auto;border-radius:12px;margin:10px}
+      .right{order:3}  /* chatbot en bas */
+      .frame{height:64vh}
+      .footer-photos{grid-template-columns:repeat(2, minmax(140px,1fr))}
+    }
+  </style>
+</head>
+<body>
+  <div id="loader" class="loader"></div>
+
+  <header>
+    <div class="topbar">
+      <span class="logo" aria-hidden="true"></span>
+      <h1>📊 Tableau de Bord Power BI – Projet 4DS</h1>
+    </div>
+  </header>
+
+  <!-- NAV GAUCHE -->
+  <aside class="sidebar left" aria-label="Navigation">
+    <h3>Navigation</h3>
+    <div class="hint">Raccourcis: 1…5</div>
+    <div class="nav">
+      <button class="link" data-key="home">🏠 Home</button>
+      <button class="link" data-key="gen">📋 Généralités</button>
+      <button class="link" data-key="fin">💰 Gestion financières</button>
+      <button class="link" data-key="int">🏗️ Gestion interne</button>
+      <button class="link" data-key="ext">🌐 Gestion externe</button>
+    </div>
+  </aside>
+
+  <!-- CONTENU PRINCIPAL -->
+  <main>
+    <iframe
+      id="pbiFrame"
+      class="frame"
+      title="4ds_projectfinal"
+      src="https://app.powerbi.com/reportEmbed?reportId=1b162c05-79cd-4936-9f6b-072172e3d017&autoAuth=true&ctid=604f1a96-cbe8-43f8-abbf-f8eaf5d85730"
+      allowfullscreen>
+    </iframe>
+  </main>
+
+  <!-- CHATBOT -->
+  <aside class="sidebar right" aria-label="Chatbot">
+    <div class="chat-shell">
+      <div class="chat-head">
+        <div class="chat-title">🤖 Chatbot</div>
+        <button class="chip" id="pasteTypes">Types de services</button>
+      </div>
+
+      <div id="messages" class="messages" role="log" aria-live="polite"></div>
+
+      <div class="chat-input">
+        <input id="q" type="text" placeholder="Posez une question… (ex : types de service)"/>
+        <button id="send">Envoyer</button>
+      </div>
+      <div id="thinking" class="thinking" style="display:none">Le bot réfléchit…</div>
+    </div>
+  </aside>
+
+  <!-- FOOTER + PHOTOS (avec ajustements 1 & 2) -->
+  <footer>
+    <div class="footer-photos" aria-label="Équipe médicale">
+      <figure>
+        <div class="img-wrap">
+          <img class="adjust-1" src="belle-jeune-femme-medecin-regardant-la-camera-dans-le-bureau.jpg" alt="Médecin 1">
+        </div>
+        <figcaption>Médecin 1</figcaption>
+      </figure>
+      <figure>
+        <div class="img-wrap">
+          <img class="adjust-2" src="docteur-en-souriant-avec-un-stethoscope.jpg" alt="Médecin 2">
+        </div>
+        <figcaption>Médecin 2</figcaption>
+      </figure>
+      <figure>
+        <div class="img-wrap">
+          <img src="medecin-avec-les-bras-croises-sur-fond-blanc.jpg" alt="Médecin 3">
+        </div>
+        <figcaption>Médecin 3</figcaption>
+      </figure>
+      <figure>
+        <div class="img-wrap">
+          <img src="portrait-de-sourire-beau-male-docteur-homme.jpg" alt="Médecin 4">
+        </div>
+        <figcaption>Médecin 4</figcaption>
+      </figure>
+      <figure>
+        <div class="img-wrap">
+          <img src="portrait-d-une-jeune-femme-souriante-medecin-travailleur-medical-de-la-sante-pointant-les-doigts-vers-la-gauche-montrant-clini.jpg" alt="Médecin 5">
+        </div>
+        <figcaption>Médecin 5</figcaption>
+      </figure>
+    </div>
+    <div class="credits">© 2025 Projet 4DS | Intégré avec <a href="https://powerbi.microsoft.com/fr-fr/" target="_blank" rel="noopener">Microsoft Power BI</a></div>
+  </footer>
+
+  <script>
+    /* ========= CONFIG ========= */
+    const PAGES = {
+      home:'ReportSectionHOME',
+      gen :'ReportSectionGENERALITES',
+      fin :'ReportSectionFINANCES',
+      int :'ReportSectionINTERNE',
+      ext :'ReportSectionEXTERNE'
+    };
+    const API_URL = "http://localhost:8000/ask";
+    /* ========================= */
+
+    const frame = document.getElementById('pbiFrame');
+    const loader = document.getElementById('loader');
+
+    const cleanBase = (url) => url.split('&pageName=')[0].split('&filter=')[0];
+    let baseSrc = cleanBase(frame.src);
+
+    function goTo(key){
+      const pageId = PAGES[key];
+      if(!pageId) return console.warn('pageName manquant pour', key);
+      loader.style.display='block';
+      frame.src = baseSrc + '&pageName=' + encodeURIComponent(pageId);
+    }
+    document.querySelectorAll('[data-key]').forEach(b => b.addEventListener('click',()=>goTo(b.dataset.key)));
+    window.addEventListener('keydown',(e)=>{
+      if(['INPUT','TEXTAREA'].includes((e.target.tagName||''))) return;
+      const n = parseInt(e.key,10), map=['home','gen','fin','int','ext'];
+      if(n>=1 && n<=5) goTo(map[n-1]);
+    });
+    frame.addEventListener('load',()=>{loader.style.display='none'});
+
+    /* ===== Chatbot ===== */
+    const $messages=document.getElementById('messages');
+    const $q=document.getElementById('q');
+    const $send=document.getElementById('send');
+    const $thinking=document.getElementById('thinking');
+    const $pasteTypes=document.getElementById('pasteTypes');
+
+    function escapeHtml(str){return String(str).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+    function addBubble(text,who='bot',extraHTML=''){
+      const div=document.createElement('div'); 
+      div.className=`bubble ${who}`; 
+      div.textContent=text;
+      if(extraHTML){
+        const ex=document.createElement('div'); 
+        ex.innerHTML=extraHTML; 
+        ex.style.fontSize='12px'; ex.style.color:'#4b5563'; 
+        div.appendChild(ex);
+      }
+      $messages.appendChild(div); 
+      $messages.scrollTop=$messages.scrollHeight;
+    }
+
+    async function askBot(question){
+      const ctrl=new AbortController(); 
+      const t=setTimeout(()=>ctrl.abort(),180000);
+      try{
+        const resp=await fetch(API_URL,{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({question}),
+          signal:ctrl.signal
+        });
+        clearTimeout(t);
+        if(!resp.ok){
+          const txt=await resp.text().catch(()=> '');
+          throw new Error(`HTTP ${resp.status} – ${txt.slice(0,120)}`);
+        }
+        const data=await resp.json().catch(()=>null);
+        if(!data) throw new Error('Réponse non-JSON.');
+        return data;
+      }catch(e){
+        clearTimeout(t);
+        if(e.name==='AbortError') throw new Error('Timeout (3 min dépassées)');
+        throw e;
+      }
+    }
+
+    async function onSend(){
+      const question=($q.value||'').trim(); 
+      if(!question) return;
+      addBubble(question,'user'); 
+      $q.value=''; 
+      $thinking.style.display='block';
+      try{
+        const data=await askBot(question);
+        let sourcesHTML='';
+        if(Array.isArray(data.sources)&&data.sources.length){
+          sourcesHTML=`<details style="margin-top:6px"><summary>Sources (${data.sources.length})</summary><ul style="margin:6px 0 0 18px">${data.sources.map(s=>`<li>${escapeHtml(s)}</li>`).join('')}</ul></details>`;
+        }
+        addBubble(data.answer||'(pas de réponse)','bot',sourcesHTML);
+      }catch(err){
+        addBubble('Erreur : '+err.message,'bot');
+      }finally{
+        $thinking.style.display='none';
+      }
+    }
+    $send.addEventListener('click',onSend);
+    $q.addEventListener('keydown',(e)=>{ if(e.key==='Enter') onSend(); });
+
+    $pasteTypes?.addEventListener('click',()=>{
+      $q.value = "Donne-moi la liste des types de services et les plus fréquents.";
+      $q.focus();
+    });
+  </script>
+</body>
+</html>
